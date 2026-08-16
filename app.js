@@ -841,3 +841,43 @@ function updateHistoryInvoiceStatus(number, status) {
   });
   localStorage.setItem('mallik_store_invoices', JSON.stringify(invoiceHistory));
 }
+
+// Convert HTML invoice to clean light-themed PDF
+function downloadInvoicePDF() {
+  const element = document.querySelector('#client-invoice-placeholder #invoice-sheet') || document.getElementById('invoice-sheet');
+  if (!element) return;
+
+  const invoiceNumber = clientActiveInvoice ? clientActiveInvoice.number : 'invoice';
+  
+  // Temporarily force light theme styles for clean printing/downloading
+  const bodyWasDark = document.body.classList.contains('dark-theme');
+  if (bodyWasDark) {
+    document.body.classList.remove('dark-theme');
+    document.body.classList.add('light-theme');
+  }
+
+  const opt = {
+    margin:       [10, 10, 10, 10],
+    filename:     `MallikStore_${invoiceNumber}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  // Run generation
+  html2pdf().set(opt).from(element).save().then(() => {
+    // Restore theme
+    if (bodyWasDark) {
+      document.body.classList.remove('light-theme');
+      document.body.classList.add('dark-theme');
+    }
+  }).catch(err => {
+    console.error("PDF generation error", err);
+    // Restore theme anyway in case of error
+    if (bodyWasDark) {
+      document.body.classList.remove('light-theme');
+      document.body.classList.add('dark-theme');
+    }
+  });
+}
+

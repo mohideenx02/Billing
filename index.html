@@ -20,6 +20,9 @@
   <!-- QRious QR Code Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
   
+  <!-- html2pdf.js PDF generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  
   <!-- Canvas Confetti -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
@@ -302,6 +305,7 @@
           <button class="btn-secondary btn-sm" onclick="clearUrlHash()"><i data-lucide="arrow-left"></i> Merchant Admin</button>
         </div>
         <div class="client-action-buttons">
+          <button class="btn-secondary" onclick="downloadInvoicePDF()"><i data-lucide="download"></i> Download PDF</button>
           <button class="btn-print btn-secondary" onclick="window.print()"><i data-lucide="printer"></i> Print Invoice</button>
           <button id="pay-now-btn" class="btn-pay btn-primary-pulse" onclick="openPaymentModal()"><i data-lucide="credit-card"></i> Pay Invoice</button>
         </div>
