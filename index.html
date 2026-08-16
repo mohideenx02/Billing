@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Generate professional, shareable billing links and invoices for Mallik Store. Safe, fast, and interactive.">
+  <title>Mallik Store | Billing Link Generator</title>
+  
+  <!-- Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS is avoided for custom CSS as per prompt styling rules -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- QRious QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body class="dark-theme">
+  <!-- Dynamic Backdrop Glows -->
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast hidden">
+    <i data-lucide="check-circle" class="toast-icon"></i>
+    <span id="toast-message">Success! Link copied to clipboard.</span>
+  </div>
+
+  <!-- Navigation Header (Hidden on Client View / Print) -->
+  <header id="main-header" class="header-nav">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-logo">MS</div>
+        <div class="brand-text">
+          <h1>Mallik Store</h1>
+          <span>Billing System</span>
+        </div>
+      </div>
+      <nav class="nav-tabs">
+        <button id="tab-create-btn" class="tab-btn active" onclick="switchTab('create')">
+          <i data-lucide="plus-circle"></i> Create Bill
+        </button>
+        <button id="tab-history-btn" class="tab-btn" onclick="switchTab('history')">
+          <i data-lucide="history"></i> History
+        </button>
+      </nav>
+      <div class="nav-actions">
+        <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Theme" onclick="toggleTheme()">
+          <i data-lucide="sun" id="sun-icon"></i>
+          <i data-lucide="moon" id="moon-icon" class="hidden"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Wrapper -->
+  <main class="main-content">
+    
+    <!-- ==================== TABS CONTAINER ==================== -->
+    <div id="merchant-workspace" class="workspace-grid">
+      
+      <!-- TAB 1: CREATE BILL -->
+      <section id="tab-create" class="tab-content active">
+        <div class="editor-layout">
+          <!-- Form Panel -->
+          <div class="form-card glass-panel">
+            <h2 class="section-title"><i data-lucide="file-text"></i> Invoice Details</h2>
+            
+            <form id="invoice-form" onsubmit="event.preventDefault();">
+              <!-- Invoice Details -->
+              <div class="form-row grid-2">
+                <div class="form-group">
+                  <label for="inv-number">Invoice Number</label>
+                  <input type="text" id="inv-number" placeholder="INV-2026-001" required>
+                </div>
+                <div class="form-group">
+                  <label for="inv-currency">Currency</label>
+                  <select id="inv-currency" onchange="updateTotals()">
+                    <option value="INR">INR (₹)</option>
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="AED">AED (د.إ)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row grid-2">
+                <div class="form-group">
+                  <label for="inv-date">Issue Date</label>
+                  <input type="date" id="inv-date" required>
+                </div>
+                <div class="form-group">
+                  <label for="inv-due-date">Due Date</label>
+                  <input type="date" id="inv-due-date" required>
+                </div>
+              </div>
+
+              <!-- Customer Details -->
+              <h3 class="subsection-title"><i data-lucide="user"></i> Client Information</h3>
+              <div class="form-row grid-2">
+                <div class="form-group">
+                  <label for="client-name">Client Name</label>
+                  <input type="text" id="client-name" placeholder="John Doe" required>
+                </div>
+                <div class="form-group">
+                  <label for="client-email">Client Email</label>
+                  <input type="email" id="client-email" placeholder="john@example.com" required>
+                </div>
+              </div>
+              <div class="form-row grid-2">
+                <div class="form-group">
+                  <label for="client-phone">Client Phone (Optional)</label>
+                  <input type="tel" id="client-phone" placeholder="+91 98765 43210">
+                </div>
+                <div class="form-group">
+                  <label for="client-address">Billing Address</label>
+                  <input type="text" id="client-address" placeholder="123 Main St, Mumbai, India" required>
+                </div>
+              </div>
+
+              <!-- Line Items -->
+              <h3 class="subsection-title"><i data-lucide="shopping-bag"></i> Items & Services</h3>
+              <div id="items-list-container" class="items-editor-list">
+                <!-- Dynamic Items will be appended here -->
+              </div>
+              <button type="button" class="btn-secondary btn-sm" onclick="addItemRow()">
+                <i data-lucide="plus"></i> Add Item
+              </button>
+
+              <!-- Taxes & Discounts -->
+              <h3 class="subsection-title"><i data-lucide="percent"></i> Adjustments</h3>
+              <div class="form-row grid-2">
+                <div class="form-group">
+                  <label for="inv-tax">Tax Rate (%)</label>
+                  <input type="number" id="inv-tax" min="0" max="100" value="18" oninput="updateTotals()">
+                </div>
+                <div class="form-group">
+                  <label for="inv-discount">Discount (%)</label>
+                  <input type="number" id="inv-discount" min="0" max="100" value="0" oninput="updateTotals()">
+                </div>
+              </div>
+
+              <div class="form-actions-sticky">
+                <button type="button" class="btn-primary w-100" onclick="generateBillingLink()">
+                  <i data-lucide="link"></i> Generate Billing Link
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Preview Panel -->
+          <div class="preview-panel">
+            <div class="sticky-preview-wrapper">
+              <div class="preview-header-bar">
+                <span><i data-lucide="eye"></i> Live Invoice Preview</span>
+                <span class="preview-badge">Client View</span>
+              </div>
+              
+              <!-- The actual Invoice container that will be cloned/shared -->
+              <div id="invoice-sheet" class="invoice-sheet glass-panel">
+                <div class="invoice-header">
+                  <div class="invoice-brand">
+                    <div class="store-symbol">MS</div>
+                    <div>
+                      <h2 class="store-name">Mallik Store</h2>
+                      <p class="store-tagline">Premium Retail & Services</p>
+                    </div>
+                  </div>
+                  <div class="invoice-meta-info">
+                    <h3 class="invoice-title-text">INVOICE</h3>
+                    <p class="invoice-num-badge" id="preview-inv-number">INV-2026-001</p>
+                    <div class="meta-dates">
+                      <div><strong>Date:</strong> <span id="preview-inv-date">16 Aug 2026</span></div>
+                      <div><strong>Due:</strong> <span id="preview-inv-due-date">30 Aug 2026</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="invoice-parties">
+                  <div class="party-merchant">
+                    <h4>From:</h4>
+                    <p class="party-name">Mallik Store Ltd.</p>
+                    <p>Dinnur main road 2nd cross</p>
+                  </div>
+                  <div class="party-client">
+                    <h4>Bill To:</h4>
+                    <p class="party-name" id="preview-client-name">John Doe</p>
+                    <p id="preview-client-address">123 Main St, Mumbai, India</p>
+                    <p id="preview-client-email">john@example.com</p>
+                    <p id="preview-client-phone">+91 98765 43210</p>
+                  </div>
+                </div>
+
+                <div class="invoice-items-table-wrapper">
+                  <table class="invoice-table">
+                    <thead>
+                      <tr>
+                        <th>Item Description</th>
+                        <th class="text-right">Price</th>
+                        <th class="text-center">Qty</th>
+                        <th class="text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="preview-items-body">
+                      <!-- Dynamic rows will be rendered here -->
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="invoice-totals-section">
+                  <div class="payment-terms-info">
+                    <h4>Payment Terms</h4>
+                    <p>Please pay by the due date. You can scan the QR code to make immediate payment online.</p>
+                    <div class="status-badge-container">
+                      <span id="preview-status-badge" class="badge unpaid">UNPAID</span>
+                    </div>
+                  </div>
+                  
+                  <div class="totals-table-wrapper">
+                    <table class="totals-table">
+                      <tr>
+                        <td>Subtotal:</td>
+                        <td id="preview-subtotal" class="text-right">₹0.00</td>
+                      </tr>
+                      <tr id="preview-discount-row" class="hidden">
+                        <td>Discount (<span id="preview-discount-percent">0</span>%):</td>
+                        <td id="preview-discount-amount" class="text-right text-success">-₹0.00</td>
+                      </tr>
+                      <tr>
+                        <td>Tax (<span id="preview-tax-percent">18</span>%):</td>
+                        <td id="preview-tax-amount" class="text-right">₹0.00</td>
+                      </tr>
+                      <tr class="grand-total-row">
+                        <td>Total Amount:</td>
+                        <td id="preview-grand-total" class="text-right">₹0.00</td>
+                      </tr>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="invoice-footer">
+                  <p>Thank you for shopping at Mallik Store!</p>
+                  <p class="footer-small">Powered by Mallik Store Secure Invoice Link Node</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: INVOICE HISTORY -->
+      <section id="tab-history" class="tab-content">
+        <div class="glass-panel history-card">
+          <div class="history-header">
+            <h2 class="section-title"><i data-lucide="history"></i> Billing Link Repository</h2>
+            <div class="search-box">
+              <i data-lucide="search"></i>
+              <input type="text" id="history-search" placeholder="Search customer or invoice..." oninput="renderHistory()">
+            </div>
+          </div>
+
+          <div class="history-table-wrapper">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Invoice #</th>
+                  <th>Client</th>
+                  <th>Date</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="history-rows">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+            <div id="history-empty-state" class="empty-state hidden">
+              <i data-lucide="inbox" class="empty-icon"></i>
+              <h3>No invoices generated yet</h3>
+              <p>Go back to the 'Create Bill' tab and generate your first billing link.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== CLIENT LINK VIEW CONTAINER ==================== -->
+    <!-- This screen displays only if an invoice is detected in the URL hash -->
+    <div id="client-view-container" class="client-layout hidden">
+      <div class="client-header-controls">
+        <div class="back-to-merchant-link hidden" id="admin-back-btn">
+          <button class="btn-secondary btn-sm" onclick="clearUrlHash()"><i data-lucide="arrow-left"></i> Merchant Admin</button>
+        </div>
+        <div class="client-action-buttons">
+          <button class="btn-print btn-secondary" onclick="window.print()"><i data-lucide="printer"></i> Print Invoice</button>
+          <button id="pay-now-btn" class="btn-pay btn-primary-pulse" onclick="openPaymentModal()"><i data-lucide="credit-card"></i> Pay Invoice</button>
+        </div>
+      </div>
+
+      <div class="client-bill-grid">
+        <!-- Rendered sheet will be inserted here dynamically -->
+        <div id="client-invoice-placeholder"></div>
+
+        <!-- Share & QR details -->
+        <div class="client-sidebar glass-panel no-print">
+          <div class="qr-header">
+            <h3><i data-lucide="qr-code"></i> Scan to Pay / Share</h3>
+            <p>Scan this QR code from your smartphone to view, print, or pay this invoice on the go.</p>
+          </div>
+          <div class="qr-canvas-wrapper">
+            <canvas id="qr-code-canvas"></canvas>
+          </div>
+          <div class="share-link-group">
+            <label for="share-url-copy">Shareable Link</label>
+            <div class="copy-input-row">
+              <input type="text" id="share-url-copy" readonly>
+              <button class="btn-copy-addon" onclick="copyClientShareLink()" aria-label="Copy link">
+                <i data-lucide="copy" id="copy-icon-client"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== PAYMENT MODAL ==================== -->
+  <div id="payment-modal" class="modal-overlay hidden">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3>Secure Checkout - Mallik Store</h3>
+        <button class="btn-close-modal" onclick="closePaymentModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="invoice-summary-inline">
+          <span id="modal-invoice-num">INV-2026-001</span>
+          <span id="modal-invoice-amount" class="modal-amount">₹0.00</span>
+        </div>
+
+        <!-- Payment Method Tabs -->
+        <div class="pay-method-tabs">
+          <button class="pay-method-tab active" id="btn-method-card" onclick="setPaymentMethod('card')">
+            <i data-lucide="credit-card"></i> Card Payment
+          </button>
+          <button class="pay-method-tab" id="btn-method-upi" onclick="setPaymentMethod('upi')">
+            <i data-lucide="phone"></i> UPI Payment
+          </button>
+        </div>
+
+        <!-- Card Section -->
+        <div id="payment-section-card" class="payment-method-section">
+          <form id="card-payment-form" onsubmit="executePayment(event)">
+            <div class="form-group">
+              <label for="card-num">Card Number</label>
+              <div class="input-icon-wrapper">
+                <i data-lucide="credit-card" class="input-icon"></i>
+                <input type="text" id="card-num" placeholder="4111 2222 3333 4444" minlength="19" maxlength="19" required>
+              </div>
+            </div>
+            <div class="form-row grid-2">
+              <div class="form-group">
+                <label for="card-expiry">Expiry Date</label>
+                <input type="text" id="card-expiry" placeholder="MM/YY" minlength="5" maxlength="5" required>
+              </div>
+              <div class="form-group">
+                <label for="card-cvv">CVV</label>
+                <input type="password" id="card-cvv" placeholder="•••" minlength="3" maxlength="3" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="card-name">Cardholder Name</label>
+              <input type="text" id="card-name" placeholder="John Doe" required>
+            </div>
+            <button type="submit" class="btn-primary w-100 btn-submit-pay">
+              <span id="pay-button-text">Pay Now</span>
+              <div class="spinner hidden" id="pay-spinner"></div>
+            </button>
+          </form>
+        </div>
+
+        <!-- UPI Section -->
+        <div id="payment-section-upi" class="payment-method-section hidden">
+          <form id="upi-payment-form" onsubmit="executePayment(event)">
+            <div class="upi-option-wrapper">
+              <p class="upi-instruction">Enter your UPI ID to receive a payment request or scan the QR Code on the side of the invoice.</p>
+              <div class="form-group">
+                <label for="upi-id">UPI ID (VPA)</label>
+                <div class="input-icon-wrapper">
+                  <i data-lucide="smartphone" class="input-icon"></i>
+                  <input type="text" id="upi-id" placeholder="username@upi" required>
+                </div>
+              </div>
+            </div>
+            <div class="upi-apps-icons">
+              <div class="upi-logo-mock">GPay</div>
+              <div class="upi-logo-mock">PhonePe</div>
+              <div class="upi-logo-mock">Paytm</div>
+              <div class="upi-logo-mock">BHIM</div>
+            </div>
+            <button type="submit" class="btn-primary w-100 btn-submit-pay">
+              <span id="upi-pay-button-text">Pay Now via UPI</span>
+              <div class="spinner hidden" id="upi-pay-spinner"></div>
+            </button>
+          </form>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <p><i data-lucide="shield-check"></i> PCI-DSS Compliant 256-bit Secure Encryption</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shared JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>
